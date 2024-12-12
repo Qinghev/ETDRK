@@ -16,9 +16,6 @@ k = [0:N/2-1 0 -N/2+1:-1]';  % Fourier wavenumbers
 [KX, KY] = meshgrid(k, k);
 K2 = KX.^2 + KY.^2;           % Laplacian in Fourier space
 
-% Dealiasing filter
-dealias = abs(KX) < 2/3 * (N/2) & abs(KY) < 2/3 * (N/2);
-
 % Initial conditions
 u0 = sin(X) .* cos(Y);
 v0 = -cos(X) .* sin(Y);
@@ -50,63 +47,32 @@ f3 = reshape(f3, N, N);
 % Main time-stepping loop
 t = 0;
 plot_interval = 10;
-while t <= t_end
-    % Nonlinear term
-    u = real(ifft2(U_hat));
-    v = real(ifft2(V_hat));
-    ux = real(ifft2(1i * KX .* U_hat));
-    uy = real(ifft2(1i * KY .* U_hat));
-    vx = real(ifft2(1i * KX .* V_hat));
-    vy = real(ifft2(1i * KY .* V_hat));
-
-    NLu = -(u .* ux + v .* uy);
-    NLv = -(u .* vx + v .* vy);
-    
-    NLu_hat = fft2(NLu) .* dealias;
-    NLv_hat = fft2(NLv) .* dealias;
-
+while t < t_end
     % ETDRK4 stages
-    a = E2 .* U_hat + Q .* NLu_hat;
-    b = E2 .* V_hat + Q .* NLv_hat;
+    [NLu_hat, NLv_hat] = nonlinear(U_hat, V_hat, KX, KY);
 
-    ua = real(ifft2(a));
-    va = real(ifft2(b));
-    
-    ux_a = real(ifft2(1i * KX .* a));
-    uy_a = real(ifft2(1i * KY .* a));
-    vx_a = real(ifft2(1i * KX .* b));
-    vy_a = real(ifft2(1i * KY .* b));
+    au = E2 .* U_hat + Q .* NLu_hat;
+    av = E2 .* V_hat + Q .* NLv_hat;
 
-    NLu_a = -(ua .* ux_a + va .* uy_a);
-    NLv_a = -(ua .* vx_a + va .* vy_a);
+    [NLu_a_hat, NLv_a_hat] = nonlinear(au, av, KX, KY);
 
-    NLu_a_hat = fft2(NLu_a) .* dealias;
-    NLv_a_hat = fft2(NLv_a) .* dealias;
+    bu = E2 .* U_hat + Q .* NLu_a_hat;
+    bv = E2 .* V_hat + Q .* NLv_a_hat;
 
-    c = E2 .* U_hat + Q .* NLu_a_hat;
-    d = E2 .* V_hat + Q .* NLv_a_hat;
+    [NLu_b_hat, NLv_b_hat] = nonlinear(bu, bv, KX, KY);
 
-    uc = real(ifft2(c));
-    vc = real(ifft2(d));
+    cu = E2 .* U_hat + Q .* (2*NLu_b_hat - NLu_hat);
+    cv = E2 .* V_hat + Q .* (2*NLv_b_hat - NLv_hat);
 
-    ux_c = real(ifft2(1i * KX .* c));
-    uy_c = real(ifft2(1i * KY .* c));
-    vx_c = real(ifft2(1i * KX .* d));
-    vy_c = real(ifft2(1i * KY .* d));
+    [NLu_c_hat, NLv_c_hat] = nonlinear(cu, cv, KX, KY);
 
-    NLu_c = -(uc .* ux_c + vc .* uy_c);
-    NLv_c = -(uc .* vx_c + vc .* vy_c);
+    U_hat = E .* U_hat + f1 .* NLu_hat + 2 * f2 .* (NLu_a_hat + NLu_b_hat) + f3 .* NLu_c_hat;
+    V_hat = E .* V_hat + f1 .* NLv_hat + 2 * f2 .* (NLv_a_hat + NLv_b_hat) + f3 .* NLv_c_hat;
 
-    NLu_c_hat = fft2(NLu_c) .* dealias;
-    NLv_c_hat = fft2(NLv_c) .* dealias;
+    % Time increment
+    t = t + dt;
 
-    dU_hat = E .* U_hat + f1 .* NLu_hat + f2 .* (NLu_a_hat + NLu_c_hat) + f3 .* fft2(-(u .* ux + v .* uy)) .* dealias;
-    dV_hat = E .* V_hat + f1 .* NLv_hat + f2 .* (NLv_a_hat + NLv_c_hat) + f3 .* fft2(-(u .* vx + v .* vy)) .* dealias;
-
-    % Update
-    U_hat = dU_hat;
-    V_hat = dV_hat;
-
+    % Visualization
     if mod(round(t / dt), plot_interval) == 0
         % Transform back to physical space
         u = real(ifft2(U_hat));
@@ -129,15 +95,19 @@ while t <= t_end
         drawnow;
     end
 
-    % Time increment
-    t = t + dt;
 end
 
-Transform back to physical space
-u = real(ifft2(U_hat));
-v = real(ifft2(V_hat));
+function [NLu_hat, NLv_hat] = nonlinear(U_hat, V_hat, KX, KY)
+    u = real(ifft2(U_hat));
+    v = real(ifft2(V_hat));
+    ux = real(ifft2(1i * KX .* U_hat));
+    uy = real(ifft2(1i * KY .* U_hat));
+    vx = real(ifft2(1i * KX .* V_hat));
+    vy = real(ifft2(1i * KY .* V_hat));
 
-% Visualization
-figure;
-subplot(1, 2, 1); contourf(x, y, u.', 50, 'LineColor', 'none'); colorbar; title('u(x,y,t)');
-subplot(1, 2, 2); contourf(x, y, v.', 50, 'LineColor', 'none'); colorbar; title('v(x,y,t)');
+    NLu = -(u .* ux + v .* uy);
+    NLv = -(u .* vx + v .* vy);
+    
+    NLu_hat = fft2(NLu);
+    NLv_hat = fft2(NLv);
+end
