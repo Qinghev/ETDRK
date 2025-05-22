@@ -2,6 +2,49 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft, ifft, fftfreq
 
+def initial_GRF(N, m, gamma, tau, sigma, bctype, interval=(0.0, 1.0)):
+    a, b = interval
+    L = b - a 
+    M = N * 2
+    
+    x_ref = np.linspace(0, 1, M, endpoint=False) 
+    x = a + L * x_ref 
+
+    if bctype == "dirichlet":
+        m = 0.0
+
+    if bctype == "periodic":
+        const = 2 * np.pi / L
+    else:
+        const = np.pi / L
+
+    k = np.arange(1, N + 1)
+    eigs = np.sqrt(2) * sigma * ((const * k) ** 2 + tau ** 2) ** (-gamma / 2)
+
+    if bctype == "dirichlet":
+        alpha = np.zeros(N)
+    else:
+        alpha = eigs * np.random.randn(N)
+
+    if bctype == "neumann":
+        beta = np.zeros(N)
+    else:
+        beta = eigs * np.random.randn(N)
+
+    a_k = alpha / 2
+    b_k = -beta / 2
+
+    c = np.concatenate([
+        np.flip(a_k) - 1j * np.flip(b_k),
+        np.array([m + 0j]),
+        a_k + 1j * b_k
+    ])
+
+    u = np.fft.ifft(np.fft.ifftshift(c), n=M).real * len(c)
+
+    return x, u
+
+
 def setup_fft(xa, xb, nx):
     L = xb - xa
     h = L / nx
