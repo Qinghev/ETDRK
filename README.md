@@ -25,5 +25,5 @@ We implement ETDRK2/3/4 methods as described by Cox & Matthews (2002) and Kassam
 Run the time convergence test:
 
 ```bash
-cd burgers
-python run_convergence.py
+cd burgers1d
+python convergence.py
