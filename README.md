@@ -15,9 +15,10 @@ $$
 \frac{\partial u}{\partial t} = \mathcal{L} u + \mathcal{N}(u)
 $$
 
-where `\mathcal{L}` is the linear part and `\mathcal{N}` the nonlinear part.
+where $L$ is the linear part and $N$ the nonlinear part.
 
 We implement ETDRK2/3/4 methods as described by Cox & Matthews (2002) and Kassam & Trefethen (2005).
+
 
 ## 🧪 Example: Burgers’ Equation
 
