@@ -11,11 +11,11 @@ This repository contains modular implementations of Exponential Time-Differencin
 
 We consider nonlinear PDEs of the form:
 
-\[
+$$
 \frac{\partial u}{\partial t} = \mathcal{L} u + \mathcal{N}(u)
-\]
+$$
 
-where \( \mathcal{L} \) is the linear part and \( \mathcal{N} \) the nonlinear part.
+where `\mathcal{L}` is the linear part and `\mathcal{N}` the nonlinear part.
 
 We implement ETDRK2/3/4 methods as described by Cox & Matthews (2002) and Kassam & Trefethen (2005).
 
