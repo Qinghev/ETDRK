@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.fft import fft, ifft, fftfreq
 from scipy.linalg import norm
+from burgers1d_etdrk import burgers1d_etdrk2, burgers1d_etdrk3, burgers1d_etdrk4
 
 def run_etdrk_solver(etdrk_solver, dt_values, u0, interval, nt_base, vis, reference_u):
     errors = []
@@ -22,29 +22,26 @@ def plot_convergence(dt_values, errors, method_name):
     plt.grid(True, which="both")
     plt.title(f"Time Convergence of {method_name}")
     
-    # 拟合斜率
     coeffs = np.polyfit(np.log(dt_values), np.log(errors), 1)
     rate = coeffs[0]
     plt.legend([f"{method_name} (order ≈ {abs(rate):.2f})"])
     plt.show()
     return rate
 
-# 初始条件
 def initial_condition(x):
     return -np.sin(np.pi * x)
 
 xa, xb = 0.0, 2.0
-nx = 2048  # 较细空间网格以减少空间误差
+nx = 2048  
 x = np.linspace(xa, xb, nx, endpoint=False)
 u0 = initial_condition(x)
 
 interval = (xa, xb)
 vis = 0.01
-T = 1.0  # 模拟时间
-dt_values = np.array([0.1, 0.05, 0.025, 0.0125])  # 时间步长
+T = 1.0  
+dt_values = np.array([0.1, 0.05, 0.025, 0.0125])  
 nt_base = int(T / dt_values[0])
 
-# 使用 ETDRK4 最小步长生成参考解
 from copy import deepcopy
 _, _, uu_ref = burgers1d_etdrk4(deepcopy(u0), interval, dt_values[-1]/4, int(T / dt_values[-1]*4), vis, show_plot=False)
 reference_u = uu_ref[-1]
